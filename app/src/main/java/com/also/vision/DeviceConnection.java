@@ -3,11 +3,14 @@ package com.also.vision;
 import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.net.wifi.WifiInfo;
+import android.net.wifi.WifiManager;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
@@ -16,6 +19,7 @@ import java.nio.channels.SocketChannel;
 import java.util.Iterator;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.Locale;
 
 /**
  * 设备连接管理类
@@ -61,24 +65,52 @@ public class DeviceConnection {
     }
     
     /**
+     * 获取WiFi IP地址
+     */
+    private static String getWifiIpAddress(Context context) {
+        WifiManager wifiManager = (WifiManager) context.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+        if (wifiManager != null && wifiManager.isWifiEnabled()) {
+            WifiInfo wifiInfo = wifiManager.getConnectionInfo();
+            int ipAddress = wifiInfo.getIpAddress();
+            
+            // 转换IP地址格式
+            return String.format(Locale.US, "%d.%d.%d.%d",
+                    (ipAddress & 0xff),
+                    (ipAddress >> 8 & 0xff),
+                    (ipAddress >> 16 & 0xff),
+                    (ipAddress >> 24 & 0xff));
+        }
+        return "";
+    }
+    
+    /**
      * 检查是否已连接到设备WiFi
      */
     public static boolean isConnectedToDeviceWifi(Context context) {
         ConnectivityManager connectivityManager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
+        
+        // 首先检查是否连接到任何WiFi
         if (activeNetworkInfo == null || activeNetworkInfo.getType() != ConnectivityManager.TYPE_WIFI) {
             return false;
         }
-        return NetworkInfo.State.CONNECTED == activeNetworkInfo.getState() && 
-               getWifiIpAddress(context).contains("192.168.42.");
-    }
-    
-    /**
-     * 获取WiFi IP地址
-     */
-    private static String getWifiIpAddress(Context context) {
-        // 实际应用中需要实现获取WiFi IP地址的方法
-        return "192.168.42.100"; // 示例返回值
+        
+        // 检查是否连接到行车记录仪的WiFi网络
+        if (NetworkInfo.State.CONNECTED == activeNetworkInfo.getState()) {
+            // 检查IP地址是否在192.168.42.x网段
+            String ipAddress = getWifiIpAddress(context);
+            if (ipAddress.startsWith("192.168.42.")) {
+                // 尝试检测设备是否可达
+                try {
+                    InetAddress deviceAddr = InetAddress.getByName(DEVICE_IP);
+                    return deviceAddr.isReachable(1000); // 1秒超时
+                } catch (IOException e) {
+                    Log.e(TAG, "检测设备连接失败: " + e.getMessage());
+                }
+            }
+        }
+        
+        return false;
     }
     
     /**
