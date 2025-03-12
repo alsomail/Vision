@@ -3,6 +3,7 @@ package com.also.vision
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.ConnectivityManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -46,7 +47,7 @@ class MainActivity : AppCompatActivity() {
 
         // 初始化客户端
         initClient()
-        
+
         // 检查WiFi连接
         checkWifiConnection()
     }
@@ -61,9 +62,24 @@ class MainActivity : AppCompatActivity() {
         // 设置按钮点击事件
         btnConnect!!.setOnClickListener { v: View? ->
             if (!isConnected) {
-                // 连接设备，但不立即改变按钮文本
-                connectDevice()
-                // 按钮文本将在连接成功的回调中更改
+                // 先检查WiFi连接状态
+                if (!isWifiConnected()) {
+                    showNoWifiDialog()
+                    return@setOnClickListener
+                }
+                
+                // 检查是否连接到设备WiFi
+                DeviceConnection.isConnectedToDeviceWifiAsync(this, object : DeviceConnection.DeviceConnectionCallback {
+                    override fun onResult(isConnected: Boolean) {
+                        if (!isConnected) {
+                            showNoDeviceDialog()
+                        } else {
+                            // 连接设备，但不立即改变按钮文本
+                            connectDevice()
+                            // 按钮文本将在连接成功的回调中更改
+                        }
+                    }
+                })
             } else {
                 disconnectDevice()
                 btnConnect!!.text = "连接"
@@ -107,16 +123,29 @@ class MainActivity : AppCompatActivity() {
         client?.initVideoPlayer(surfaceView)
     }
 
+    private fun handleConnectionTimeout() {
+        dismissLoadingDialog()
+        showToast("连接超时，请检查设备是否开启")
+
+        // 确保清理所有连接资源
+        if (client != null) {
+            client!!.disconnect()
+        }
+
+        // 重置连接状态
+        isConnected = false
+        btnConnect!!.text = "连接"
+    }
+
     private fun connectDevice() {
         // 显示加载对话框
         showLoadingDialog("正在连接设备...")
-        
+
         // 设置连接超时
         connectionTimeoutHandler.postDelayed({
-            dismissLoadingDialog()
-            showToast("连接超时，请检查设备是否开启")
+            handleConnectionTimeout()
         }, CONNECTION_TIMEOUT)
-        
+
         // 连接设备
         client!!.connect()
     }
@@ -156,7 +185,7 @@ class MainActivity : AppCompatActivity() {
             Manifest.permission.ACCESS_NETWORK_STATE,
             Manifest.permission.ACCESS_WIFI_STATE
         )
-        
+
         // 存储权限列表（根据 Android 版本区分）
         val storagePermissions = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
             // Android 13+ 使用细粒度媒体权限
@@ -171,10 +200,10 @@ class MainActivity : AppCompatActivity() {
                 Manifest.permission.READ_EXTERNAL_STORAGE
             )
         }
-        
+
         // 合并权限列表
         val permissions = basePermissions + storagePermissions
-        
+
         // 检查哪些权限需要申请
         val permissionsToRequest = ArrayList<String>()
         for (permission in permissions) {
@@ -182,12 +211,12 @@ class MainActivity : AppCompatActivity() {
                 permissionsToRequest.add(permission)
             }
         }
-        
+
         // 申请权限
         if (permissionsToRequest.isNotEmpty()) {
             ActivityCompat.requestPermissions(
-                this, 
-                permissionsToRequest.toTypedArray(), 
+                this,
+                permissionsToRequest.toTypedArray(),
                 PERMISSION_REQUEST_CODE
             )
         }
@@ -197,27 +226,30 @@ class MainActivity : AppCompatActivity() {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == PERMISSION_REQUEST_CODE) {
             val deniedPermissions = ArrayList<String>()
-            
+
             for (i in permissions.indices) {
                 if (grantResults[i] != PackageManager.PERMISSION_GRANTED) {
                     deniedPermissions.add(permissions[i])
                 }
             }
-            
+
             if (deniedPermissions.isNotEmpty()) {
                 // 检查是否有必要的权限被拒绝
                 val criticalPermissionDenied = deniedPermissions.any { permission ->
                     when (permission) {
                         Manifest.permission.INTERNET,
                         Manifest.permission.ACCESS_NETWORK_STATE -> true
+
                         Manifest.permission.WRITE_EXTERNAL_STORAGE,
                         Manifest.permission.READ_EXTERNAL_STORAGE -> android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.TIRAMISU
+
                         Manifest.permission.READ_MEDIA_IMAGES,
                         Manifest.permission.READ_MEDIA_VIDEO -> android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU
+
                         else -> false
                     }
                 }
-                
+
                 if (criticalPermissionDenied) {
                     showToast("应用需要相关权限才能正常运行")
                     finish()
@@ -361,14 +393,16 @@ class MainActivity : AppCompatActivity() {
     private fun showPermissionExplanation() {
         // 检查是否有需要申请的权限
         val permissionsToRequest = getPermissionsToRequest()
-        
+
         // 只有当确实需要申请权限时才显示弹窗
         if (permissionsToRequest.isNotEmpty()) {
             val builder = AlertDialog.Builder(this)
             builder.setTitle("权限申请")
-                .setMessage("此应用需要以下权限才能正常工作：\n" +
+                .setMessage(
+                    "此应用需要以下权限才能正常工作：\n" +
                         "• 网络权限：连接到行车记录仪设备\n" +
-                        "• 存储权限：保存截图和照片")
+                        "• 存储权限：保存截图和照片"
+                )
                 .setPositiveButton("确定") { _, _ ->
                     requestPermissions(permissionsToRequest)
                 }
@@ -384,7 +418,7 @@ class MainActivity : AppCompatActivity() {
             Manifest.permission.ACCESS_NETWORK_STATE,
             Manifest.permission.ACCESS_WIFI_STATE
         )
-        
+
         // 存储权限列表（根据 Android 版本区分）
         val storagePermissions = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
             // Android 13+ 使用细粒度媒体权限
@@ -399,10 +433,10 @@ class MainActivity : AppCompatActivity() {
                 Manifest.permission.READ_EXTERNAL_STORAGE
             )
         }
-        
+
         // 合并权限列表
         val permissions = basePermissions + storagePermissions
-        
+
         // 检查哪些权限需要申请
         val permissionsToRequest = ArrayList<String>()
         for (permission in permissions) {
@@ -410,34 +444,75 @@ class MainActivity : AppCompatActivity() {
                 permissionsToRequest.add(permission)
             }
         }
-        
+
         return permissionsToRequest.toTypedArray()
     }
 
     private fun requestPermissions(permissions: Array<String>) {
         ActivityCompat.requestPermissions(
-            this, 
-            permissions, 
+            this,
+            permissions,
             PERMISSION_REQUEST_CODE
         )
     }
 
     private fun checkWifiConnection() {
-        if (!DeviceConnection.isConnectedToDeviceWifi(this)) {
-            showWifiConnectionDialog()
+        // 首先检查是否连接到WiFi
+        if (!isWifiConnected()) {
+            showNoWifiDialog()
+        } 
+        // 如果连接了WiFi，异步检查设备连接
+        else {
+            DeviceConnection.isConnectedToDeviceWifiAsync(this, object : DeviceConnection.DeviceConnectionCallback {
+                override fun onResult(isConnected: Boolean) {
+                    if (!isConnected) {
+                        showNoDeviceDialog()
+                    }
+                }
+            })
         }
     }
 
-    private fun showWifiConnectionDialog() {
+    /**
+     * 检查是否连接到任何WiFi
+     */
+    private fun isWifiConnected(): Boolean {
+        val connectivityManager = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
+        val activeNetworkInfo = connectivityManager.activeNetworkInfo
+        return activeNetworkInfo != null &&
+            activeNetworkInfo.type == ConnectivityManager.TYPE_WIFI &&
+            activeNetworkInfo.isConnected
+    }
+
+    /**
+     * 显示未连接WiFi的对话框
+     */
+    private fun showNoWifiDialog() {
         val builder = AlertDialog.Builder(this)
-        builder.setTitle("WiFi连接")
-            .setMessage("请连接到行车记录仪WiFi网络才能使用此应用")
+        builder.setTitle("WiFi未连接")
+            .setMessage("请连接到WiFi网络才能使用此应用")
             .setPositiveButton("去连接") { _, _ ->
                 openWifiSettings()
             }
             .setNegativeButton("取消") { _, _ ->
-                // 用户取消，可以提示无法使用应用的核心功能
                 showToast("未连接WiFi，部分功能将无法使用")
+            }
+            .setCancelable(false)
+            .show()
+    }
+
+    /**
+     * 显示未检测到设备的对话框
+     */
+    private fun showNoDeviceDialog() {
+        val builder = AlertDialog.Builder(this)
+        builder.setTitle("未检测到设备")
+            .setMessage("已连接WiFi，但未检测到行车记录仪设备(192.168.42.1)，请确保连接到正确的WiFi网络")
+            .setPositiveButton("去连接") { _, _ ->
+                openWifiSettings()
+            }
+            .setNegativeButton("取消") { _, _ ->
+                showToast("未连接到设备，部分功能将无法使用")
             }
             .setCancelable(false)
             .show()
@@ -448,39 +523,43 @@ class MainActivity : AppCompatActivity() {
         startActivity(intent)
     }
 
-    // 在onResume中再次检查WiFi连接状态，以便用户从WiFi设置返回后自动连接
+    // 修改onResume方法，同样使用异步检查
     override fun onResume() {
         super.onResume()
-        
+
         // 如果已经有权限，检查WiFi连接
         if (hasRequiredPermissions()) {
-            if (DeviceConnection.isConnectedToDeviceWifi(this)) {
-                // 如果WiFi已连接但设备未连接，尝试连接设备
-                if (!isConnected) {
-                    connectDevice()
-                }
+            if (isWifiConnected()) {
+                DeviceConnection.isConnectedToDeviceWifiAsync(this, object : DeviceConnection.DeviceConnectionCallback {
+                    override fun onResult(isConnected: Boolean) {
+                        if (isConnected && !isConnected) {
+                            // 如果WiFi已连接且设备可达，但设备未连接，尝试连接设备
+                            connectDevice()
+                        }
+                    }
+                })
             }
         }
     }
 
     private fun hasRequiredPermissions(): Boolean {
-        return ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_WIFI_STATE) == 
-                PackageManager.PERMISSION_GRANTED &&
-               ContextCompat.checkSelfPermission(this, Manifest.permission.INTERNET) == 
-                PackageManager.PERMISSION_GRANTED
+        return ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_WIFI_STATE) ==
+            PackageManager.PERMISSION_GRANTED &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.INTERNET) ==
+            PackageManager.PERMISSION_GRANTED
     }
 
     private fun showLoadingDialog(message: String) {
         dismissLoadingDialog() // 确保没有其他对话框在显示
-        
+
         val view = layoutInflater.inflate(R.layout.dialog_loading, null)
         val tvMessage = view.findViewById<TextView>(R.id.tv_loading_message)
         tvMessage.text = message
-        
+
         val builder = AlertDialog.Builder(this)
         builder.setView(view)
         builder.setCancelable(false)
-        
+
         loadingDialog = builder.create()
         loadingDialog?.show()
     }

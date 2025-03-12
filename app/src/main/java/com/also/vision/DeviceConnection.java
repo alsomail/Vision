@@ -65,25 +65,6 @@ public class DeviceConnection {
     }
     
     /**
-     * 获取WiFi IP地址
-     */
-    private static String getWifiIpAddress(Context context) {
-        WifiManager wifiManager = (WifiManager) context.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
-        if (wifiManager != null && wifiManager.isWifiEnabled()) {
-            WifiInfo wifiInfo = wifiManager.getConnectionInfo();
-            int ipAddress = wifiInfo.getIpAddress();
-            
-            // 转换IP地址格式
-            return String.format(Locale.US, "%d.%d.%d.%d",
-                    (ipAddress & 0xff),
-                    (ipAddress >> 8 & 0xff),
-                    (ipAddress >> 16 & 0xff),
-                    (ipAddress >> 24 & 0xff));
-        }
-        return "";
-    }
-    
-    /**
      * 检查是否已连接到设备WiFi
      */
     public static boolean isConnectedToDeviceWifi(Context context) {
@@ -97,20 +78,31 @@ public class DeviceConnection {
         
         // 检查是否连接到行车记录仪的WiFi网络
         if (NetworkInfo.State.CONNECTED == activeNetworkInfo.getState()) {
-            // 检查IP地址是否在192.168.42.x网段
-            String ipAddress = getWifiIpAddress(context);
-            if (ipAddress.startsWith("192.168.42.")) {
-                // 尝试检测设备是否可达
-                try {
-                    InetAddress deviceAddr = InetAddress.getByName(DEVICE_IP);
-                    return deviceAddr.isReachable(1000); // 1秒超时
-                } catch (IOException e) {
-                    Log.e(TAG, "检测设备连接失败: " + e.getMessage());
-                }
+            // 尝试检测设备是否可达
+            try {
+                InetAddress deviceAddr = InetAddress.getByName(DEVICE_IP);
+                return deviceAddr.isReachable(1000); // 1秒超时
+            } catch (IOException e) {
+                Log.e(TAG, "检测设备连接失败: " + e.getMessage());
             }
         }
         
         return false;
+    }
+    
+    /**
+     * 异步检查是否已连接到设备WiFi
+     * @param context 上下文
+     * @param callback 回调接口
+     */
+    public static void isConnectedToDeviceWifiAsync(Context context, DeviceConnectionCallback callback) {
+        new Thread(() -> {
+            boolean isConnected = isConnectedToDeviceWifi(context);
+            // 在主线程回调结果
+            new Handler(Looper.getMainLooper()).post(() -> {
+                callback.onResult(isConnected);
+            });
+        }).start();
     }
     
     /**
@@ -171,6 +163,9 @@ public class DeviceConnection {
                 Log.e(TAG, "连接失败: " + e.getMessage());
                 e.printStackTrace();
                 
+                // 确保清理资源
+                cleanupResources();
+                
                 if (callback != null) {
                     final String errorMsg = e.getMessage();
                     mainHandler.post(() -> callback.onConnectionFailed(errorMsg));
@@ -179,6 +174,29 @@ public class DeviceConnection {
                 retryConnect();
             }
         });
+    }
+    
+    /**
+     * 清理资源
+     */
+    private void cleanupResources() {
+        try {
+            if (socketChannel != null) {
+                socketChannel.close();
+                socketChannel = null;
+            }
+            
+            if (selector != null) {
+                selector.close();
+                selector = null;
+            }
+            
+            isConnected = false;
+            isRunning = false;
+        } catch (IOException e) {
+            Log.e(TAG, "清理资源异常: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
     
     /**
@@ -388,5 +406,12 @@ public class DeviceConnection {
         void onConnected();
         void onConnectionFailed(String reason);
         void onDataReceived(byte[] data);
+    }
+    
+    /**
+     * 设备连接检查回调接口
+     */
+    public interface DeviceConnectionCallback {
+        void onResult(boolean isConnected);
     }
 }
