@@ -92,6 +92,27 @@ public class MessageManager {
      */
     public static final int MSG_TAKE_PHOTO = 769;
 
+    /**
+     * 获取文件列表消息ID
+     * 请求体: {"token":12345,"msg_id":1281,"param":"all","offset":0,"count":20}
+     * 响应体: {"msg_id":1281,"rval":0,"total":100,"files":[{"name":"IMG_0001.JPG","path":"/DCIM/100MEDIA/","url":"http://192.168.42.1/DCIM/100MEDIA/IMG_0001.JPG","thumb":"http://192.168.42.1/DCIM/100MEDIA/IMG_0001_THUMB.JPG","size":1024000,"time":"2023-05-01 12:00:00","type":2}]}
+     */
+    public static final int MSG_GET_FILE_LIST = 1281;
+
+    /**
+     * 删除文件消息ID
+     * 请求体: {"token":12345,"msg_id":1282,"param":"IMG_0001.JPG"}
+     * 响应体: {"msg_id":1282,"rval":0}
+     */
+    public static final int MSG_DELETE_FILE = 1282;
+
+    /**
+     * 下载文件消息ID
+     * 请求体: {"token":12345,"msg_id":1283,"param":"IMG_0001.JPG"}
+     * 响应体: {"msg_id":1283,"rval":0,"url":"http://192.168.42.1/DCIM/100MEDIA/IMG_0001.JPG"}
+     */
+    public static final int MSG_DOWNLOAD_FILE = 1283;
+
     private MessageManager() {
         this.connection = DeviceConnection.getInstance();
         this.executorService = Executors.newSingleThreadExecutor();
@@ -376,6 +397,7 @@ public class MessageManager {
 
     /**
      * 设置会话令牌
+     * @param tokenNumber 会话令牌
      */
     public void setTokenNumber(int tokenNumber) {
         this.tokenNumber = tokenNumber;
@@ -418,5 +440,57 @@ public class MessageManager {
      */
     public int getTokenNumber() {
         return this.tokenNumber;
+    }
+
+    /**
+     * 获取文件列表
+     * @param fileType 文件类型，"all"=所有文件，"video"=视频文件，"photo"=图片文件
+     * @param offset 起始位置
+     * @param count 获取数量
+     */
+    public void getFileList(String fileType, int offset, int count) {
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.put("token", this.tokenNumber);
+        jsonObject.put("msg_id", MSG_GET_FILE_LIST);
+        jsonObject.put("param", fileType);
+        jsonObject.put("offset", offset);
+        jsonObject.put("count", count);
+        
+        String jsonStr = jsonObject.toJSONString();
+        connection.sendData(jsonStr.getBytes(), MSG_GET_FILE_LIST);
+        
+        Log.d(TAG, "发送获取文件列表命令: " + jsonStr);
+    }
+
+    /**
+     * 删除文件
+     * @param fileName 文件名
+     */
+    public void deleteFile(String fileName) {
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.put("token", this.tokenNumber);
+        jsonObject.put("msg_id", MSG_DELETE_FILE);
+        jsonObject.put("param", fileName);
+        
+        String jsonStr = jsonObject.toJSONString();
+        connection.sendData(jsonStr.getBytes(), MSG_DELETE_FILE);
+        
+        Log.d(TAG, "发送删除文件命令: " + jsonStr);
+    }
+
+    /**
+     * 下载文件
+     * @param fileName 文件名
+     */
+    public void downloadFile(String fileName) {
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.put("token", this.tokenNumber);
+        jsonObject.put("msg_id", MSG_DOWNLOAD_FILE);
+        jsonObject.put("param", fileName);
+        
+        String jsonStr = jsonObject.toJSONString();
+        connection.sendData(jsonStr.getBytes(), MSG_DOWNLOAD_FILE);
+        
+        Log.d(TAG, "发送下载文件命令: " + jsonStr);
     }
 } 

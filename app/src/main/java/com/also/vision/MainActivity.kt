@@ -27,6 +27,9 @@ class MainActivity : AppCompatActivity() {
     private var btnPlay: Button? = null
     private var btnSnapshot: Button? = null
     private var btnPhoto: Button? = null
+    private var btnBrowseFiles: Button? = null
+    private var btnBrowseVideos: Button? = null
+    private var btnBrowsePhotos: Button? = null
 
     private var isConnected = false
     private var isPlaying = false
@@ -58,6 +61,9 @@ class MainActivity : AppCompatActivity() {
         btnPlay = findViewById(R.id.btn_play)
         btnSnapshot = findViewById(R.id.btn_snapshot)
         btnPhoto = findViewById(R.id.btn_photo)
+        btnBrowseFiles = findViewById(R.id.btn_browse_files)
+        btnBrowseVideos = findViewById(R.id.btn_browse_videos)
+        btnBrowsePhotos = findViewById(R.id.btn_browse_photos)
 
         // 设置按钮点击事件
         btnConnect!!.setOnClickListener { v: View? ->
@@ -114,6 +120,18 @@ class MainActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
             takePhoto()
+        }
+
+        btnBrowseFiles?.setOnClickListener {
+            openFileList("all")
+        }
+
+        btnBrowseVideos?.setOnClickListener {
+            openFileList("video")
+        }
+
+        btnBrowsePhotos?.setOnClickListener {
+            openFileList("photo")
         }
     }
 
@@ -388,6 +406,42 @@ class MainActivity : AppCompatActivity() {
         override fun onMessageReceived(msgId: Int, result: Int, content: String) {
             Log.d(TAG, "收到消息: ID=$msgId, 结果=$result, 内容=$content")
         }
+
+        override fun onFileListReceived(fileList: List<DeviceFile>, total: Int) {
+            Log.d(TAG, "收到文件列表: ${fileList.size}个文件，共${total}个")
+        }
+
+        override fun onFileListFailed(reason: String) {
+            runOnUiThread {
+                showToast("获取文件列表失败: $reason")
+                Log.e(TAG, "获取文件列表失败: $reason")
+            }
+        }
+
+        override fun onFileDeleted() {
+            runOnUiThread {
+                showToast("文件删除成功")
+                Log.d(TAG, "文件删除成功")
+            }
+        }
+
+        override fun onFileDeleteFailed(reason: String) {
+            runOnUiThread {
+                showToast("文件删除失败: $reason")
+                Log.e(TAG, "文件删除失败: $reason")
+            }
+        }
+
+        override fun onFileDownloadUrl(url: String) {
+            Log.d(TAG, "文件下载URL: $url")
+        }
+
+        override fun onFileDownloadFailed(reason: String) {
+            runOnUiThread {
+                showToast("获取文件下载链接失败: $reason")
+                Log.e(TAG, "获取文件下载链接失败: $reason")
+            }
+        }
     }
 
     private fun showPermissionExplanation() {
@@ -569,6 +623,21 @@ class MainActivity : AppCompatActivity() {
         loadingDialog = null
         // 移除超时回调
         connectionTimeoutHandler.removeCallbacksAndMessages(null)
+    }
+
+    /**
+     * 打开文件浏览界面
+     * @param fileType 文件类型，"all"=所有文件，"video"=视频文件，"photo"=图片文件
+     */
+    private fun openFileList(fileType: String) {
+        if (!isConnected) {
+            showToast("请先连接设备")
+            return
+        }
+        
+        val intent = Intent(this, FileListActivity::class.java)
+        intent.putExtra("fileType", fileType)
+        startActivity(intent)
     }
 
     companion object {

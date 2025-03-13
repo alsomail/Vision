@@ -11,6 +11,13 @@ import com.also.vision.model.GetSDInfoJson;
 import com.also.vision.model.GetTokenNumberJson;
 import com.also.vision.model.SDCardInfo;
 import com.also.vision.model.TakePhotoJson;
+import com.also.vision.model.DeviceFile;
+import com.also.vision.model.GetFileListJson;
+
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 
 /**
  * 行车记录仪客户端
@@ -249,6 +256,88 @@ public class VisionClient {
                 }
                 break;
                 
+            case MessageManager.MSG_GET_FILE_LIST:
+                // 文件列表响应: {"msg_id":1281,"rval":0,"total":100,"files":[...]}
+                if (result == 0) {
+                    try {
+                        GetFileListJson fileListJson = JSON.parseObject(content, GetFileListJson.class);
+                        List<DeviceFile> fileList = new ArrayList<>();
+                        
+                        if (fileListJson.getFiles() != null) {
+                            for (GetFileListJson.FileItem item : fileListJson.getFiles()) {
+                                DeviceFile file = new DeviceFile();
+                                file.setFileName(item.getName());
+                                file.setFilePath(item.getPath());
+                                file.setFileUrl(item.getUrl());
+                                file.setThumbnailUrl(item.getThumb());
+                                file.setFileSize(item.getSize());
+                                file.setFileType(item.getType());
+                                file.setDuration(item.getDuration());
+                                
+                                // 解析时间字符串为Date对象
+                                try {
+                                    SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+                                    file.setCreateTime(sdf.parse(item.getTime()));
+                                } catch (Exception e) {
+                                    file.setCreateTime(new Date());
+                                }
+                                
+                                fileList.add(file);
+                            }
+                        }
+                        
+                        if (callback != null) {
+                            callback.onFileListReceived(fileList, fileListJson.getTotal());
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        if (callback != null) {
+                            callback.onFileListFailed("解析文件列表失败: " + e.getMessage());
+                        }
+                    }
+                } else {
+                    if (callback != null) {
+                        callback.onFileListFailed("获取文件列表失败，错误码: " + result);
+                    }
+                }
+                break;
+                
+            case MessageManager.MSG_DELETE_FILE:
+                // 删除文件响应: {"msg_id":1282,"rval":0}
+                if (result == 0) {
+                    if (callback != null) {
+                        callback.onFileDeleted();
+                    }
+                } else {
+                    if (callback != null) {
+                        callback.onFileDeleteFailed("删除文件失败，错误码: " + result);
+                    }
+                }
+                break;
+                
+            case MessageManager.MSG_DOWNLOAD_FILE:
+                // 下载文件响应: {"msg_id":1283,"rval":0,"url":"http://192.168.42.1/DCIM/100MEDIA/IMG_0001.JPG"}
+                if (result == 0) {
+                    try {
+                        JSONObject jsonObject = JSON.parseObject(content);
+                        String url = jsonObject.getString("url");
+                        
+                        if (callback != null) {
+                            callback.onFileDownloadUrl(url);
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        if (callback != null) {
+                            callback.onFileDownloadFailed("解析下载URL失败: " + e.getMessage());
+                        }
+                    }
+                } else {
+                    if (callback != null) {
+                        callback.onFileDownloadFailed("获取下载URL失败，错误码: " + result);
+                    }
+                }
+                break;
+                
             default:
                 // 其他消息
                 if (callback != null) {
@@ -330,7 +419,33 @@ public class VisionClient {
     }
     
     /**
-     * 客户端回调接口
+     * 获取文件列表
+     * @param fileType 文件类型，"all"=所有文件，"video"=视频文件，"photo"=图片文件
+     * @param offset 起始位置
+     * @param count 获取数量
+     */
+    public void getFileList(String fileType, int offset, int count) {
+        messageManager.getFileList(fileType, offset, count);
+    }
+    
+    /**
+     * 删除文件
+     * @param fileName 文件名
+     */
+    public void deleteFile(String fileName) {
+        messageManager.deleteFile(fileName);
+    }
+    
+    /**
+     * 下载文件
+     * @param fileName 文件名
+     */
+    public void downloadFile(String fileName) {
+        messageManager.downloadFile(fileName);
+    }
+    
+    /**
+     * 视频客户端回调接口
      */
     public interface VisionCallback {
         // 连接相关
@@ -343,7 +458,7 @@ public class VisionClient {
         void onDeviceInfoReceived(DeviceInfo deviceInfo);
         void onSDCardInfoReceived(SDCardInfo sdInfo);
         
-        // 视频相关
+        // 视频播放相关
         void onVideoPlayStarted();
         void onVideoPlayStopped();
         void onVideoPlayError(String error);
@@ -351,17 +466,31 @@ public class VisionClient {
         // 拍照相关
         void onPhotoTaken();
         void onPhotoFailed(String reason);
+        
+        // 截图相关
         void onSnapshotTaken(String path);
         
-        // 事件记录相关
+        // 事件录制相关
         void onEventRecorded();
         void onEventRecordFailed(String reason);
         
-        // SD卡相关
+        // SD卡格式化相关
         void onSDCardFormatted();
         void onSDCardFormatFailed(String reason);
         
-        // 其他消息
+        // 文件列表相关
+        void onFileListReceived(List<DeviceFile> fileList, int total);
+        void onFileListFailed(String reason);
+        
+        // 文件删除相关
+        void onFileDeleted();
+        void onFileDeleteFailed(String reason);
+        
+        // 文件下载相关
+        void onFileDownloadUrl(String url);
+        void onFileDownloadFailed(String reason);
+        
+        // 通用消息回调
         void onMessageReceived(int msgId, int result, String content);
     }
 }
