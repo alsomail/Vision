@@ -7,17 +7,16 @@
     android:gravity="center">
 
     <ProgressBar
-        android:id="@+id/progress_bar"
+        android:id="@+id/progressBar"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:indeterminate="true" />
+        android:layout_marginEnd="16dp" />
 
     <TextView
-        android:id="@+id/tv_loading_message"
+        android:id="@+id/tvMessage"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="16dp"
-        android:text="正在加载..."
+        android:text="加载中..."
         android:textSize="16sp" />
 
 </LinearLayout> 

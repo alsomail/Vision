@@ -1,6 +1,7 @@
 package com.also.vision
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.ConnectivityManager
@@ -8,37 +9,47 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import android.view.SurfaceView
 import android.view.View
 import android.widget.Button
+import android.widget.ProgressBar
 import android.widget.Toast
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.viewpager2.widget.ViewPager2
+import com.also.vision.adapter.TabPagerAdapter
+import com.also.vision.model.DeviceFile
 import com.also.vision.model.DeviceInfo
 import com.also.vision.model.SDCardInfo
+import com.also.vision.ui.LiveFragment
+import com.also.vision.ui.PhotoFragment
+import com.also.vision.ui.VideoFragment
+import com.google.android.material.tabs.TabLayout
+import com.google.android.material.tabs.TabLayoutMediator
+import android.widget.LinearLayout
+import com.also.vision.callback.BaseVisionCallback
 
 class MainActivity : AppCompatActivity() {
     private var client: VisionClient? = null
-    private var surfaceView: SurfaceView? = null
     private var btnConnect: Button? = null
-    private var btnPlay: Button? = null
-    private var btnSnapshot: Button? = null
-    private var btnPhoto: Button? = null
-    private var btnBrowseFiles: Button? = null
-    private var btnBrowseVideos: Button? = null
-    private var btnBrowsePhotos: Button? = null
+
+    private lateinit var tabLayout: TabLayout
+    private lateinit var viewPager: ViewPager2
+    private lateinit var tabPagerAdapter: TabPagerAdapter
+
+    private var liveFragment: LiveFragment? = null
+    private var videoFragment: VideoFragment? = null
+    private var photoFragment: PhotoFragment? = null
 
     private var isConnected = false
-    private var isPlaying = false
 
     private var loadingDialog: AlertDialog? = null
     private var connectionTimeoutHandler = Handler(Looper.getMainLooper())
     private val CONNECTION_TIMEOUT = 5000L // 5秒超时
 
-    protected override fun onCreate(savedInstanceState: Bundle?) {
+    override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
@@ -56,89 +67,78 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initViews() {
-        surfaceView = findViewById(R.id.surface_view)
-        btnConnect = findViewById(R.id.btn_connect)
-        btnPlay = findViewById(R.id.btn_play)
-        btnSnapshot = findViewById(R.id.btn_snapshot)
-        btnPhoto = findViewById(R.id.btn_photo)
-        btnBrowseFiles = findViewById(R.id.btn_browse_files)
-        btnBrowseVideos = findViewById(R.id.btn_browse_videos)
-        btnBrowsePhotos = findViewById(R.id.btn_browse_photos)
+        btnConnect = findViewById(R.id.btnConnect)
+        tabLayout = findViewById(R.id.tabLayout)
+        viewPager = findViewById(R.id.viewPager)
+
+        // 初始化Fragment
+        liveFragment = LiveFragment.newInstance()
+        videoFragment = VideoFragment.newInstance()
+        photoFragment = PhotoFragment.newInstance()
+
+        // 设置ViewPager适配器
+        tabPagerAdapter = TabPagerAdapter(this)
+        tabPagerAdapter.addFragment(liveFragment!!, "实时")
+        tabPagerAdapter.addFragment(videoFragment!!, "视频")
+        tabPagerAdapter.addFragment(photoFragment!!, "图片")
+
+        viewPager.adapter = tabPagerAdapter
+
+        // 连接TabLayout和ViewPager
+        TabLayoutMediator(tabLayout, viewPager) { tab, position ->
+            tab.text = tabPagerAdapter.getPageTitle(position)
+        }.attach()
+
+        // 设置页面切换监听
+        viewPager.registerOnPageChangeCallback(object : ViewPager2.OnPageChangeCallback() {
+            override fun onPageSelected(position: Int) {
+                super.onPageSelected(position)
+
+                // 如果已连接设备且切换到视频或图片Tab，加载相应数据
+                if (isConnected) {
+                    when (position) {
+                        1 -> videoFragment?.loadVideoList()
+                        2 -> photoFragment?.loadPhotoList()
+                    }
+                }
+            }
+        })
 
         // 设置按钮点击事件
-        btnConnect!!.setOnClickListener { v: View? ->
+        btnConnect?.setOnClickListener {
             if (!isConnected) {
                 // 先检查WiFi连接状态
                 if (!isWifiConnected()) {
                     showNoWifiDialog()
                     return@setOnClickListener
                 }
-                
+
                 // 检查是否连接到设备WiFi
                 DeviceConnection.isConnectedToDeviceWifiAsync(this, object : DeviceConnection.DeviceConnectionCallback {
                     override fun onResult(isConnected: Boolean) {
                         if (!isConnected) {
                             showNoDeviceDialog()
                         } else {
-                            // 连接设备，但不立即改变按钮文本
+                            // 连接设备
                             connectDevice()
-                            // 按钮文本将在连接成功的回调中更改
                         }
                     }
                 })
             } else {
                 disconnectDevice()
-                btnConnect!!.text = "连接"
+                btnConnect?.text = "连接"
             }
-        }
-
-        btnPlay!!.setOnClickListener { v: View? ->
-            if (!isConnected) {
-                showToast("请先连接设备")
-                return@setOnClickListener
-            }
-            if (!isPlaying) {
-                startVideoPlay()
-                btnPlay!!.text = "停止"
-            } else {
-                stopVideoPlay()
-                btnPlay!!.text = "播放"
-            }
-        }
-
-        btnSnapshot!!.setOnClickListener { v: View? ->
-            if (!isPlaying) {
-                showToast("请先开始播放视频")
-                return@setOnClickListener
-            }
-            takeSnapshot()
-        }
-
-        btnPhoto!!.setOnClickListener { v: View? ->
-            if (!isConnected) {
-                showToast("请先连接设备")
-                return@setOnClickListener
-            }
-            takePhoto()
-        }
-
-        btnBrowseFiles?.setOnClickListener {
-            openFileList("all")
-        }
-
-        btnBrowseVideos?.setOnClickListener {
-            openFileList("video")
-        }
-
-        btnBrowsePhotos?.setOnClickListener {
-            openFileList("photo")
         }
     }
 
     private fun initClient() {
         client = VisionClient.getInstance()
         client?.init(this, VisionCallback())
-        client?.initVideoPlayer(surfaceView)
+    }
+
+    // 提供获取客户端实例的方法，供Fragment使用
+    fun getClient(): VisionClient? {
+        return client
     }
 
     private fun handleConnectionTimeout() {
@@ -153,6 +153,9 @@ class MainActivity : AppCompatActivity() {
         // 重置连接状态
         isConnected = false
         btnConnect!!.text = "连接"
+
+        // 更新Fragment的连接状态
+        liveFragment?.updateConnectionStatus(false)
     }
 
     private fun connectDevice() {
@@ -169,279 +172,124 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun disconnectDevice() {
-        dismissLoadingDialog()
+        // 断开连接
         client!!.disconnect()
         isConnected = false
-        isPlaying = false
-        btnPlay!!.text = "播放"
+
+        // 更新Fragment的连接状态
+        liveFragment?.updateConnectionStatus(false)
     }
 
-    private fun startVideoPlay() {
-        client!!.startVideoPlay()
+    private fun showLoadingDialog(message: String) {
+        dismissLoadingDialog() // 确保没有其他对话框在显示
+
+        val builder = AlertDialog.Builder(this)
+        builder.setMessage(message)
+        builder.setCancelable(false)
+
+        // 添加一个进度条
+        val progressBar = ProgressBar(this)
+        val params = LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.WRAP_CONTENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        )
+        params.gravity = android.view.Gravity.CENTER
+        progressBar.layoutParams = params
+
+        builder.setView(progressBar)
+
+        loadingDialog = builder.create()
+        loadingDialog!!.show()
     }
 
-    private fun stopVideoPlay() {
-        client!!.stopVideoPlay()
-    }
+    private fun dismissLoadingDialog() {
+        connectionTimeoutHandler.removeCallbacksAndMessages(null) // 移除超时回调
 
-    private fun takeSnapshot() {
-        client!!.takeSnapshot()
-    }
-
-    private fun takePhoto() {
-        client!!.takePhoto()
+        if (loadingDialog != null && loadingDialog!!.isShowing) {
+            loadingDialog!!.dismiss()
+        }
     }
 
     private fun showToast(message: String) {
         Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
     }
 
-    private fun checkPermissions() {
-        // 基础权限列表（适用于所有 Android 版本）
-        val basePermissions = arrayOf(
-            Manifest.permission.INTERNET,
-            Manifest.permission.ACCESS_NETWORK_STATE,
-            Manifest.permission.ACCESS_WIFI_STATE
-        )
-
-        // 存储权限列表（根据 Android 版本区分）
-        val storagePermissions = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            // Android 13+ 使用细粒度媒体权限
-            arrayOf(
-                Manifest.permission.READ_MEDIA_IMAGES,
-                Manifest.permission.READ_MEDIA_VIDEO
-            )
-        } else {
-            // Android 12 及以下使用存储权限
-            arrayOf(
-                Manifest.permission.WRITE_EXTERNAL_STORAGE,
-                Manifest.permission.READ_EXTERNAL_STORAGE
-            )
-        }
-
-        // 合并权限列表
-        val permissions = basePermissions + storagePermissions
-
-        // 检查哪些权限需要申请
-        val permissionsToRequest = ArrayList<String>()
-        for (permission in permissions) {
-            if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
-                permissionsToRequest.add(permission)
-            }
-        }
-
-        // 申请权限
-        if (permissionsToRequest.isNotEmpty()) {
-            ActivityCompat.requestPermissions(
-                this,
-                permissionsToRequest.toTypedArray(),
-                PERMISSION_REQUEST_CODE
-            )
-        }
+    private fun isWifiConnected(): Boolean {
+        val connectivityManager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val networkInfo = connectivityManager.activeNetworkInfo
+        return networkInfo != null && networkInfo.type == ConnectivityManager.TYPE_WIFI && networkInfo.isConnected
     }
 
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == PERMISSION_REQUEST_CODE) {
-            val deniedPermissions = ArrayList<String>()
-
-            for (i in permissions.indices) {
-                if (grantResults[i] != PackageManager.PERMISSION_GRANTED) {
-                    deniedPermissions.add(permissions[i])
-                }
-            }
-
-            if (deniedPermissions.isNotEmpty()) {
-                // 检查是否有必要的权限被拒绝
-                val criticalPermissionDenied = deniedPermissions.any { permission ->
-                    when (permission) {
-                        Manifest.permission.INTERNET,
-                        Manifest.permission.ACCESS_NETWORK_STATE -> true
-
-                        Manifest.permission.WRITE_EXTERNAL_STORAGE,
-                        Manifest.permission.READ_EXTERNAL_STORAGE -> android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.TIRAMISU
-
-                        Manifest.permission.READ_MEDIA_IMAGES,
-                        Manifest.permission.READ_MEDIA_VIDEO -> android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU
-
-                        else -> false
+    private fun checkWifiConnection() {
+        if (!isWifiConnected()) {
+            showNoWifiDialog()
+        } else {
+            // 检查是否连接到设备WiFi
+            DeviceConnection.isConnectedToDeviceWifiAsync(this, object : DeviceConnection.DeviceConnectionCallback {
+                override fun onResult(isConnected: Boolean) {
+                    if (!isConnected) {
+                        showNoDeviceDialog()
                     }
                 }
+            })
+        }
+    }
 
-                if (criticalPermissionDenied) {
-                    showToast("应用需要相关权限才能正常运行")
-                    finish()
-                } else {
-                    showToast("部分功能可能受限")
-                }
+    private fun showNoWifiDialog() {
+        val builder = AlertDialog.Builder(this)
+        builder.setTitle("未连接WiFi")
+            .setMessage("请先连接到WiFi网络")
+            .setPositiveButton("去连接") { _, _ ->
+                openWifiSettings()
+            }
+            .setNegativeButton("取消") { _, _ ->
+                showToast("未连接WiFi，无法使用设备功能")
+            }
+            .setCancelable(false)
+            .show()
+    }
+
+    private fun showNoDeviceDialog() {
+        val builder = AlertDialog.Builder(this)
+        builder.setTitle("未检测到设备")
+            .setMessage("已连接WiFi，但未检测到行车记录仪设备(192.168.42.1)，请确保连接到正确的WiFi网络")
+            .setPositiveButton("去连接") { _, _ ->
+                openWifiSettings()
+            }
+            .setNegativeButton("取消") { _, _ ->
+                showToast("未连接到设备，部分功能将无法使用")
+            }
+            .setCancelable(false)
+            .show()
+    }
+
+    private fun openWifiSettings() {
+        val intent = Intent(android.provider.Settings.ACTION_WIFI_SETTINGS)
+        startActivity(intent)
+    }
+
+    // 修改onResume方法，同样使用异步检查
+    override fun onResume() {
+        super.onResume()
+        if (hasRequiredPermissions()) {
+            if (isWifiConnected()) {
+                DeviceConnection.isConnectedToDeviceWifiAsync(this, object : DeviceConnection.DeviceConnectionCallback {
+                    override fun onResult(isConnected: Boolean) {
+                        if (isConnected && !this@MainActivity.isConnected) {
+                            // 如果WiFi已连接且设备可达，但设备未连接，尝试连接设备
+                            connectDevice()
+                        }
+                    }
+                })
             }
         }
     }
 
-    protected override fun onDestroy() {
-        super.onDestroy()
-        if (client != null) {
-            client!!.disconnect()
-        }
-    }
-
-    /**
-     * 视频客户端回调
-     */
-    private inner class VisionCallback : VisionClient.VisionCallback {
-        override fun onConnected() {
-            runOnUiThread {
-                dismissLoadingDialog() // 连接成功，关闭加载对话框
-                isConnected = true
-                btnConnect!!.text = "断开"
-                showToast("设备连接成功")
-                Log.d(TAG, "设备连接成功")
-            }
-        }
-
-        override fun onConnectionFailed(reason: String) {
-            runOnUiThread {
-                dismissLoadingDialog() // 连接失败，关闭加载对话框
-                isConnected = false
-                btnConnect!!.text = "连接"
-                showToast("连接失败: $reason")
-                Log.e(TAG, "连接失败: $reason")
-            }
-        }
-
-        override fun onSessionStarted() {
-            Log.d(TAG, "会话开始")
-        }
-
-        override fun onSessionFailed(reason: String) {
-            runOnUiThread {
-                showToast("会话失败: $reason")
-                Log.e(TAG, "会话失败: $reason")
-            }
-        }
-
-        override fun onDeviceInfoReceived(deviceInfo: DeviceInfo) {
-            Log.d(TAG, "设备信息: $deviceInfo")
-        }
-
-        override fun onSDCardInfoReceived(sdInfo: SDCardInfo) {
-            Log.d(TAG, "SD卡信息: $sdInfo")
-        }
-
-        override fun onVideoPlayStarted() {
-            runOnUiThread {
-                isPlaying = true
-                showToast("视频开始播放")
-                Log.d(TAG, "视频开始播放")
-            }
-        }
-
-        override fun onVideoPlayStopped() {
-            runOnUiThread {
-                isPlaying = false
-                btnPlay!!.text = "播放"
-                showToast("视频停止播放")
-                Log.d(TAG, "视频停止播放")
-            }
-        }
-
-        override fun onVideoPlayError(error: String) {
-            runOnUiThread {
-                isPlaying = false
-                btnPlay!!.text = "播放"
-                showToast("视频播放错误: $error")
-                Log.e(TAG, "视频播放错误: $error")
-            }
-        }
-
-        override fun onPhotoTaken() {
-            runOnUiThread {
-                showToast("拍照成功")
-                Log.d(TAG, "拍照成功")
-            }
-        }
-
-        override fun onPhotoFailed(reason: String) {
-            runOnUiThread {
-                showToast("拍照失败: $reason")
-                Log.e(TAG, "拍照失败: $reason")
-            }
-        }
-
-        override fun onSnapshotTaken(path: String) {
-            runOnUiThread {
-                showToast("截图成功: $path")
-                Log.d(TAG, "截图成功: $path")
-            }
-        }
-
-        override fun onEventRecorded() {
-            runOnUiThread {
-                showToast("事件记录成功")
-                Log.d(TAG, "事件记录成功")
-            }
-        }
-
-        override fun onEventRecordFailed(reason: String) {
-            runOnUiThread {
-                showToast("事件记录失败: $reason")
-                Log.e(TAG, "事件记录失败: $reason")
-            }
-        }
-
-        override fun onSDCardFormatted() {
-            runOnUiThread {
-                showToast("SD卡格式化成功")
-                Log.d(TAG, "SD卡格式化成功")
-            }
-        }
-
-        override fun onSDCardFormatFailed(reason: String) {
-            runOnUiThread {
-                showToast("SD卡格式化失败: $reason")
-                Log.e(TAG, "SD卡格式化失败: $reason")
-            }
-        }
-
-        override fun onMessageReceived(msgId: Int, result: Int, content: String) {
-            Log.d(TAG, "收到消息: ID=$msgId, 结果=$result, 内容=$content")
-        }
-
-        override fun onFileListReceived(fileList: List<DeviceFile>, total: Int) {
-            Log.d(TAG, "收到文件列表: ${fileList.size}个文件，共${total}个")
-        }
-
-        override fun onFileListFailed(reason: String) {
-            runOnUiThread {
-                showToast("获取文件列表失败: $reason")
-                Log.e(TAG, "获取文件列表失败: $reason")
-            }
-        }
-
-        override fun onFileDeleted() {
-            runOnUiThread {
-                showToast("文件删除成功")
-                Log.d(TAG, "文件删除成功")
-            }
-        }
-
-        override fun onFileDeleteFailed(reason: String) {
-            runOnUiThread {
-                showToast("文件删除失败: $reason")
-                Log.e(TAG, "文件删除失败: $reason")
-            }
-        }
-
-        override fun onFileDownloadUrl(url: String) {
-            Log.d(TAG, "文件下载URL: $url")
-        }
-
-        override fun onFileDownloadFailed(reason: String) {
-            runOnUiThread {
-                showToast("获取文件下载链接失败: $reason")
-                Log.e(TAG, "获取文件下载链接失败: $reason")
-            }
-        }
+    private fun hasRequiredPermissions(): Boolean {
+        return ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_WIFI_STATE) ==
+            PackageManager.PERMISSION_GRANTED &&
+            ContextCompat.checkSelfPermission(this, Manifest.permission.INTERNET) ==
+            PackageManager.PERMISSION_GRANTED
     }
 
     private fun showPermissionExplanation() {
@@ -473,171 +321,94 @@ class MainActivity : AppCompatActivity() {
             Manifest.permission.ACCESS_WIFI_STATE
         )
 
-        // 存储权限列表（根据 Android 版本区分）
-        val storagePermissions = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-            // Android 13+ 使用细粒度媒体权限
-            arrayOf(
-                Manifest.permission.READ_MEDIA_IMAGES,
-                Manifest.permission.READ_MEDIA_VIDEO
-            )
+        // 存储权限列表（根据 Android 版本不同而不同）
+        val storagePermissions = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
         } else {
-            // Android 12 及以下使用存储权限
             arrayOf(
-                Manifest.permission.WRITE_EXTERNAL_STORAGE,
-                Manifest.permission.READ_EXTERNAL_STORAGE
+                Manifest.permission.READ_EXTERNAL_STORAGE,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE
             )
         }
 
         // 合并权限列表
-        val permissions = basePermissions + storagePermissions
+        val allPermissions = basePermissions + storagePermissions
 
-        // 检查哪些权限需要申请
-        val permissionsToRequest = ArrayList<String>()
-        for (permission in permissions) {
-            if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
-                permissionsToRequest.add(permission)
-            }
-        }
-
-        return permissionsToRequest.toTypedArray()
+        // 过滤出未授权的权限
+        return allPermissions.filter {
+            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
+        }.toTypedArray()
     }
 
     private fun requestPermissions(permissions: Array<String>) {
-        ActivityCompat.requestPermissions(
-            this,
-            permissions,
-            PERMISSION_REQUEST_CODE
-        )
+        ActivityCompat.requestPermissions(this, permissions, PERMISSION_REQUEST_CODE)
     }
 
-    private fun checkWifiConnection() {
-        // 首先检查是否连接到WiFi
-        if (!isWifiConnected()) {
-            showNoWifiDialog()
-        } 
-        // 如果连接了WiFi，异步检查设备连接
-        else {
-            DeviceConnection.isConnectedToDeviceWifiAsync(this, object : DeviceConnection.DeviceConnectionCallback {
-                override fun onResult(isConnected: Boolean) {
-                    if (!isConnected) {
-                        showNoDeviceDialog()
-                    }
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == PERMISSION_REQUEST_CODE) {
+            var allGranted = true
+            for (result in grantResults) {
+                if (result != PackageManager.PERMISSION_GRANTED) {
+                    allGranted = false
+                    break
                 }
-            })
-        }
-    }
-
-    /**
-     * 检查是否连接到任何WiFi
-     */
-    private fun isWifiConnected(): Boolean {
-        val connectivityManager = getSystemService(CONNECTIVITY_SERVICE) as ConnectivityManager
-        val activeNetworkInfo = connectivityManager.activeNetworkInfo
-        return activeNetworkInfo != null &&
-            activeNetworkInfo.type == ConnectivityManager.TYPE_WIFI &&
-            activeNetworkInfo.isConnected
-    }
-
-    /**
-     * 显示未连接WiFi的对话框
-     */
-    private fun showNoWifiDialog() {
-        val builder = AlertDialog.Builder(this)
-        builder.setTitle("WiFi未连接")
-            .setMessage("请连接到WiFi网络才能使用此应用")
-            .setPositiveButton("去连接") { _, _ ->
-                openWifiSettings()
             }
-            .setNegativeButton("取消") { _, _ ->
-                showToast("未连接WiFi，部分功能将无法使用")
-            }
-            .setCancelable(false)
-            .show()
-    }
 
-    /**
-     * 显示未检测到设备的对话框
-     */
-    private fun showNoDeviceDialog() {
-        val builder = AlertDialog.Builder(this)
-        builder.setTitle("未检测到设备")
-            .setMessage("已连接WiFi，但未检测到行车记录仪设备(192.168.42.1)，请确保连接到正确的WiFi网络")
-            .setPositiveButton("去连接") { _, _ ->
-                openWifiSettings()
-            }
-            .setNegativeButton("取消") { _, _ ->
-                showToast("未连接到设备，部分功能将无法使用")
-            }
-            .setCancelable(false)
-            .show()
-    }
-
-    private fun openWifiSettings() {
-        val intent = Intent(android.provider.Settings.ACTION_WIFI_SETTINGS)
-        startActivity(intent)
-    }
-
-    // 修改onResume方法，同样使用异步检查
-    override fun onResume() {
-        super.onResume()
-
-        // 如果已经有权限，检查WiFi连接
-        if (hasRequiredPermissions()) {
-            if (isWifiConnected()) {
-                DeviceConnection.isConnectedToDeviceWifiAsync(this, object : DeviceConnection.DeviceConnectionCallback {
-                    override fun onResult(isConnected: Boolean) {
-                        if (isConnected && !isConnected) {
-                            // 如果WiFi已连接且设备可达，但设备未连接，尝试连接设备
-                            connectDevice()
-                        }
-                    }
-                })
+            if (!allGranted) {
+                showToast("部分权限被拒绝，应用可能无法正常工作")
             }
         }
     }
 
-    private fun hasRequiredPermissions(): Boolean {
-        return ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_WIFI_STATE) ==
-            PackageManager.PERMISSION_GRANTED &&
-            ContextCompat.checkSelfPermission(this, Manifest.permission.INTERNET) ==
-            PackageManager.PERMISSION_GRANTED
-    }
+    private inner class VisionCallback : BaseVisionCallback() {
+        override fun onConnected() {
+            runOnUiThread {
+                dismissLoadingDialog() // 连接成功，关闭加载对话框
+                isConnected = true
+                btnConnect!!.text = "断开"
+                showToast("设备连接成功")
+                Log.d(TAG, "设备连接成功")
 
-    private fun showLoadingDialog(message: String) {
-        dismissLoadingDialog() // 确保没有其他对话框在显示
+                // 更新Fragment的连接状态
+                liveFragment?.updateConnectionStatus(true)
 
-        val view = layoutInflater.inflate(R.layout.dialog_loading, null)
-        val tvMessage = view.findViewById<TextView>(R.id.tv_loading_message)
-        tvMessage.text = message
-
-        val builder = AlertDialog.Builder(this)
-        builder.setView(view)
-        builder.setCancelable(false)
-
-        loadingDialog = builder.create()
-        loadingDialog?.show()
-    }
-
-    private fun dismissLoadingDialog() {
-        loadingDialog?.dismiss()
-        loadingDialog = null
-        // 移除超时回调
-        connectionTimeoutHandler.removeCallbacksAndMessages(null)
-    }
-
-    /**
-     * 打开文件浏览界面
-     * @param fileType 文件类型，"all"=所有文件，"video"=视频文件，"photo"=图片文件
-     */
-    private fun openFileList(fileType: String) {
-        if (!isConnected) {
-            showToast("请先连接设备")
-            return
+                // 如果当前是视频或图片Tab，加载相应数据
+                when (viewPager.currentItem) {
+                    1 -> videoFragment?.loadVideoList()
+                    2 -> photoFragment?.loadPhotoList()
+                }
+            }
         }
-        
-        val intent = Intent(this, FileListActivity::class.java)
-        intent.putExtra("fileType", fileType)
-        startActivity(intent)
+
+        override fun onConnectionFailed(reason: String) {
+            runOnUiThread {
+                dismissLoadingDialog() // 连接失败，关闭加载对话框
+                isConnected = false
+                btnConnect!!.text = "连接"
+                showToast("连接失败: $reason")
+                Log.e(TAG, "连接失败: $reason")
+            }
+        }
+
+        override fun onSessionStarted() {
+            Log.d(TAG, "会话开始")
+        }
+
+        override fun onSessionFailed(reason: String) {
+            runOnUiThread {
+                showToast("会话失败: $reason")
+                Log.e(TAG, "会话失败: $reason")
+            }
+        }
+
+        override fun onDeviceInfoReceived(deviceInfo: DeviceInfo) {
+            Log.d(TAG, "设备信息: $deviceInfo")
+        }
+
+        override fun onSDCardInfoReceived(sdInfo: SDCardInfo) {
+            Log.d(TAG, "SD卡信息: $sdInfo")
+        }
     }
 
     companion object {
