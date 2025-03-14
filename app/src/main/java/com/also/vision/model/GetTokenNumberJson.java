@@ -1,28 +1,42 @@
 package com.also.vision.model;
 
+import com.alibaba.fastjson.annotation.JSONField;
+
 /**
- * 获取令牌号的JSON模型类
+ * 获取令牌响应JSON
  */
 public class GetTokenNumberJson {
-    private int msg_id;
-    private int param;
+    @JSONField(name = "msg_id")
+    private int msgId;
     
-    public GetTokenNumberJson() {
+    @JSONField(name = "rval")
+    private int result;
+    
+    @JSONField(name = "param")
+    private int tokenNumber;
+    
+    // Getters and Setters
+    public int getMsgId() {
+        return msgId;
     }
     
-    public int getMsg_id() {
-        return msg_id;
+    public void setMsgId(int msgId) {
+        this.msgId = msgId;
     }
     
-    public void setMsg_id(int msg_id) {
-        this.msg_id = msg_id;
+    public int getResult() {
+        return result;
     }
     
-    public int getParam() {
-        return param;
+    public void setResult(int result) {
+        this.result = result;
     }
     
-    public void setParam(int param) {
-        this.param = param;
+    public int getTokenNumber() {
+        return tokenNumber;
+    }
+    
+    public void setTokenNumber(int tokenNumber) {
+        this.tokenNumber = tokenNumber;
     }
 } 

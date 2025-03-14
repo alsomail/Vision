@@ -74,7 +74,7 @@ class LiveFragment : Fragment() {
         }
 
         // 设置SurfaceView
-        client?.initVideoPlayer(surfaceView)
+        client?.setVideoSurface(surfaceView)
     }
 
     private fun showToast(message: String) {

@@ -1,61 +1,76 @@
 package com.also.vision.model;
 
+import com.alibaba.fastjson.annotation.JSONField;
+
 /**
- * 获取SD卡信息的JSON模型类
+ * 获取SD卡信息响应JSON
  */
 public class GetSDInfoJson {
-    private int free_space;
-    private String health_status;
-    private int msg_id;
-    private String residual_life;
-    private int rval;
-    private int total_space;
-
-    public int getFree_space() {
-        return this.free_space;
+    @JSONField(name = "msg_id")
+    private int msgId;
+    
+    @JSONField(name = "rval")
+    private int result;
+    
+    @JSONField(name = "total")
+    private long totalSpace;
+    
+    @JSONField(name = "free")
+    private long freeSpace;
+    
+    @JSONField(name = "status")
+    private int status;
+    
+    /**
+     * 将JSON数据转换为SDCardInfo对象
+     * @return SDCardInfo对象
+     */
+    public SDCardInfo getSdInfo() {
+        SDCardInfo sdInfo = new SDCardInfo();
+        sdInfo.setTotalSpace(totalSpace);
+        sdInfo.setFreeSpace(freeSpace);
+        sdInfo.setStatus(status);
+        return sdInfo;
     }
-
-    public String getHealth_status() {
-        return this.health_status;
+    
+    // Getters and Setters
+    public int getMsgId() {
+        return msgId;
     }
-
-    public int getMsg_id() {
-        return this.msg_id;
+    
+    public void setMsgId(int msgId) {
+        this.msgId = msgId;
     }
-
-    public String getResidual_life() {
-        return this.residual_life;
+    
+    public int getResult() {
+        return result;
     }
-
-    public int getRval() {
-        return this.rval;
+    
+    public void setResult(int result) {
+        this.result = result;
     }
-
-    public int getTotal_space() {
-        return this.total_space;
+    
+    public long getTotalSpace() {
+        return totalSpace;
     }
-
-    public void setFree_space(int i) {
-        this.free_space = i;
+    
+    public void setTotalSpace(long totalSpace) {
+        this.totalSpace = totalSpace;
     }
-
-    public void setHealth_status(String str) {
-        this.health_status = str;
+    
+    public long getFreeSpace() {
+        return freeSpace;
     }
-
-    public void setMsg_id(int i) {
-        this.msg_id = i;
+    
+    public void setFreeSpace(long freeSpace) {
+        this.freeSpace = freeSpace;
     }
-
-    public void setResidual_life(String str) {
-        this.residual_life = str;
+    
+    public int getStatus() {
+        return status;
     }
-
-    public void setRval(int i) {
-        this.rval = i;
-    }
-
-    public void setTotal_space(int i) {
-        this.total_space = i;
+    
+    public void setStatus(int status) {
+        this.status = status;
     }
 } 

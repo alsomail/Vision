@@ -61,10 +61,16 @@ dependencies {
     // FastJSON依赖
     implementation("com.alibaba:fastjson:1.2.83")
 
+    // Glide依赖
+    implementation("com.github.bumptech.glide:glide:4.15.1")
+    annotationProcessor("com.github.bumptech.glide:compiler:4.15.1")
+
     // 约束布局
     implementation ("androidx.constraintlayout:constraintlayout:2.1.4")
     implementation ("androidx.appcompat:appcompat:1.6.1")
 
     implementation ("com.google.android.material:material:1.6.0")
 
+    implementation ("com.github.chrisbanes:PhotoView:2.3.0")
+   
 }

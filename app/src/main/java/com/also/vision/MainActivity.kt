@@ -49,6 +49,8 @@ class MainActivity : AppCompatActivity() {
     private var connectionTimeoutHandler = Handler(Looper.getMainLooper())
     private val CONNECTION_TIMEOUT = 5000L // 5秒超时
 
+    private var visionCallback: VisionCallback? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -133,7 +135,21 @@ class MainActivity : AppCompatActivity() {
 
     private fun initClient() {
         client = VisionClient.getInstance()
-        client?.init(this, VisionCallback())
+        visionCallback = VisionCallback()
+        client?.init(applicationContext)
+
+        // 注册回调
+        client?.addCallback(visionCallback)
+
+        // 连接设备
+        client?.connect()
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+
+        // 移除回调
+        VisionClient.getInstance().removeCallback(visionCallback)
     }
 
     // 提供获取客户端实例的方法，供Fragment使用

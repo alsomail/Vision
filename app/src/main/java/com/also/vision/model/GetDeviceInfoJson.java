@@ -1,70 +1,124 @@
 package com.also.vision.model;
 
+import com.alibaba.fastjson.annotation.JSONField;
+
 /**
- * 获取设备信息的JSON模型类
+ * 获取设备信息响应JSON
  */
 public class GetDeviceInfoJson {
-    private String camera_type;
-    private String firm_date;
-    private String firm_ver;
-    private int msg_id;
-    private String param_version;
-    private String serial_num;
-    private String verify_code;
-
-    public String getCamera_type() {
-        return this.camera_type;
+    @JSONField(name = "msg_id")
+    private int msgId;
+    
+    @JSONField(name = "rval")
+    private int result;
+    
+    @JSONField(name = "camera_type")
+    private String deviceName;
+    
+    @JSONField(name = "chip_id")
+    private String chipId;
+    
+    @JSONField(name = "firm_ver")
+    private String firmwareVersion;
+    
+    @JSONField(name = "hw_ver")
+    private String hardwareVersion;
+    
+    @JSONField(name = "api_ver")
+    private String apiVersion;
+    
+    @JSONField(name = "serial_num")
+    private String serialNumber;
+    
+    @JSONField(name = "vendor_name")
+    private String vendorName;
+    
+    /**
+     * 将JSON数据转换为DeviceInfo对象
+     * @return DeviceInfo对象
+     */
+    public DeviceInfo getDeviceInfo() {
+        DeviceInfo deviceInfo = new DeviceInfo();
+        deviceInfo.setDeviceName(deviceName);
+        deviceInfo.setChipId(chipId);
+        deviceInfo.setFirmwareVersion(firmwareVersion);
+        deviceInfo.setHardwareVersion(hardwareVersion);
+        deviceInfo.setApiVersion(apiVersion);
+        deviceInfo.setSerialNumber(serialNumber);
+        deviceInfo.setVendorName(vendorName);
+        return deviceInfo;
     }
-
-    public String getFirm_date() {
-        return this.firm_date;
+    
+    // Getters and Setters
+    public int getMsgId() {
+        return msgId;
     }
-
-    public String getFirm_ver() {
-        return this.firm_ver;
+    
+    public void setMsgId(int msgId) {
+        this.msgId = msgId;
     }
-
-    public int getMsg_id() {
-        return this.msg_id;
+    
+    public int getResult() {
+        return result;
     }
-
-    public String getParam_version() {
-        return this.param_version;
+    
+    public void setResult(int result) {
+        this.result = result;
     }
-
-    public String getSerial_num() {
-        return this.serial_num;
+    
+    public String getDeviceName() {
+        return deviceName;
     }
-
-    public String getVerify_code() {
-        return this.verify_code;
+    
+    public void setDeviceName(String deviceName) {
+        this.deviceName = deviceName;
     }
-
-    public void setCamera_type(String str) {
-        this.camera_type = str;
+    
+    public String getChipId() {
+        return chipId;
     }
-
-    public void setFirm_date(String str) {
-        this.firm_date = str;
+    
+    public void setChipId(String chipId) {
+        this.chipId = chipId;
     }
-
-    public void setFirm_ver(String str) {
-        this.firm_ver = str;
+    
+    public String getFirmwareVersion() {
+        return firmwareVersion;
     }
-
-    public void setMsg_id(int i) {
-        this.msg_id = i;
+    
+    public void setFirmwareVersion(String firmwareVersion) {
+        this.firmwareVersion = firmwareVersion;
     }
-
-    public void setParam_version(String str) {
-        this.param_version = str;
+    
+    public String getHardwareVersion() {
+        return hardwareVersion;
     }
-
-    public void setSerial_num(String str) {
-        this.serial_num = str;
+    
+    public void setHardwareVersion(String hardwareVersion) {
+        this.hardwareVersion = hardwareVersion;
     }
-
-    public void setVerify_code(String str) {
-        this.verify_code = str;
+    
+    public String getApiVersion() {
+        return apiVersion;
+    }
+    
+    public void setApiVersion(String apiVersion) {
+        this.apiVersion = apiVersion;
+    }
+    
+    public String getSerialNumber() {
+        return serialNumber;
+    }
+    
+    public void setSerialNumber(String serialNumber) {
+        this.serialNumber = serialNumber;
+    }
+    
+    public String getVendorName() {
+        return vendorName;
+    }
+    
+    public void setVendorName(String vendorName) {
+        this.vendorName = vendorName;
     }
 } 

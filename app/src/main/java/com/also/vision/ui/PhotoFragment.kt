@@ -18,7 +18,6 @@ import com.also.vision.adapter.FileListAdapter
 import com.also.vision.callback.BaseVisionCallback
 import com.also.vision.model.DeviceFile
 import com.also.vision.ui.ImageViewerActivity
-import java.io.File
 
 class PhotoFragment : Fragment() {
     private var client: VisionClient? = null
@@ -71,14 +70,35 @@ class PhotoFragment : Fragment() {
         }
     }
 
+    private val photoCallback = object : BaseVisionCallback() {
+        override fun onPhotoTaken() {
+            // 处理拍照成功
+            activity?.runOnUiThread {
+                // 更新UI
+            }
+        }
+        
+        override fun onPhotoFailed(reason: String) {
+            // 处理拍照失败
+            activity?.runOnUiThread {
+                // 显示错误信息
+            }
+        }
+        
+        // 其他需要处理的回调...
+    }
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        val view = inflater.inflate(R.layout.fragment_file_list, container, false)
+        val view = inflater.inflate(R.layout.fragment_photo, container, false)
 
         // 初始化视图
         initViews(view)
+
+        // 添加回调
+        VisionClient.getInstance().addCallback(photoCallback)
 
         return view
     }
@@ -94,6 +114,7 @@ class PhotoFragment : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         client?.removeCallback(callback)
+        VisionClient.getInstance().removeCallback(photoCallback)
     }
 
     private fun initViews(view: View) {
@@ -152,6 +173,11 @@ class PhotoFragment : Fragment() {
             }
             .setNegativeButton("取消", null)
             .show()
+    }
+
+    // 拍照按钮点击事件
+    private fun onTakePhotoClicked() {
+        VisionClient.getInstance().takePhoto()
     }
 
     companion object {

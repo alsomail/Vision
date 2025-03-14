@@ -18,13 +18,13 @@ import com.also.vision.adapter.FileListAdapter
 import com.also.vision.callback.BaseVisionCallback
 import com.also.vision.model.DeviceFile
 import com.also.vision.ui.VideoPlayerActivity
-import java.io.File
 
 class VideoFragment : Fragment() {
     private var client: VisionClient? = null
     private lateinit var listView: ListView
     private lateinit var progressBar: ProgressBar
     private lateinit var tvEmpty: TextView
+    private lateinit var surfaceView: View
 
     private var fileList = ArrayList<DeviceFile>()
     private var adapter: FileListAdapter? = null
@@ -75,7 +75,13 @@ class VideoFragment : Fragment() {
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        val view = inflater.inflate(R.layout.fragment_file_list, container, false)
+        val view = inflater.inflate(R.layout.fragment_video, container, false)
+
+        // 获取SurfaceView
+        surfaceView = view.findViewById(R.id.video_surface)
+
+        // 设置视频显示视图
+        VisionClient.getInstance().setVideoSurface(surfaceView)
 
         // 初始化视图
         initViews(view)
@@ -94,6 +100,9 @@ class VideoFragment : Fragment() {
     override fun onDestroyView() {
         super.onDestroyView()
         client?.removeCallback(callback)
+
+        // 移除视频显示视图
+        VisionClient.getInstance().removeVideoSurface()
     }
 
     private fun initViews(view: View) {

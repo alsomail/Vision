@@ -1,58 +1,43 @@
 package com.also.vision.model;
 
+import com.alibaba.fastjson.annotation.JSONField;
+
 /**
- * 拍照响应的JSON模型类
+ * 拍照响应JSON
  */
 public class TakePhotoJson {
-    private int msg_id;
-    private int rval;
-    private String param;
-    private String type;
-    private int fileType;
+    @JSONField(name = "msg_id")
+    private int msgId;
+    
+    @JSONField(name = "rval")
+    private int result;
+    
+    @JSONField(name = "url")
     private String url;
+    
+    @JSONField(name = "thumb_url")
     private String thumbnailUrl;
+    
+    @JSONField(name = "type")
+    private int fileType;
     
     public TakePhotoJson() {
     }
     
-    public int getMsg_id() {
-        return msg_id;
+    public int getMsgId() {
+        return msgId;
     }
     
-    public void setMsg_id(int msg_id) {
-        this.msg_id = msg_id;
+    public void setMsgId(int msgId) {
+        this.msgId = msgId;
     }
     
-    public int getRval() {
-        return rval;
+    public int getResult() {
+        return result;
     }
     
-    public void setRval(int rval) {
-        this.rval = rval;
-    }
-    
-    public String getParam() {
-        return param;
-    }
-    
-    public void setParam(String param) {
-        this.param = param;
-    }
-    
-    public String getType() {
-        return type;
-    }
-    
-    public void setType(String type) {
-        this.type = type;
-    }
-    
-    public int getFileType() {
-        return fileType;
-    }
-    
-    public void setFileType(int fileType) {
-        this.fileType = fileType;
+    public void setResult(int result) {
+        this.result = result;
     }
     
     public String getUrl() {
@@ -69,5 +54,13 @@ public class TakePhotoJson {
     
     public void setThumbnailUrl(String thumbnailUrl) {
         this.thumbnailUrl = thumbnailUrl;
+    }
+    
+    public int getFileType() {
+        return fileType;
+    }
+    
+    public void setFileType(int fileType) {
+        this.fileType = fileType;
     }
 } 

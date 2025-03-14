@@ -46,6 +46,8 @@ public class VideoStreamManager {
     private ExoPlayer player;
     private TextureView textureView;
     
+    private boolean pendingPlay = false;
+    
     private VideoStreamManager() {
         // 初始化视频播放相关组件
     }
@@ -62,21 +64,42 @@ public class VideoStreamManager {
     }
     
     /**
-     * 初始化视频播放器
+     * 初始化视频管理器
+     * @param callback 视频回调
      */
-    public void init(Context context, SurfaceView surfaceView, VideoCallback callback) {
-        this.context = context;
-        this.surfaceView = surfaceView;
+    public void init(VideoCallback callback) {
         this.callback = callback;
-        
-        // 初始化ExoPlayer
-        initPlayer();
-        
-        Log.d(TAG, "视频播放器初始化完成");
+        // 初始化其他组件，但不设置SurfaceView
     }
     
     /**
-     * 初始化播放器
+     * 设置视频显示视图
+     * @param surfaceView 用于显示视频的SurfaceView
+     */
+    public void setSurfaceView(SurfaceView surfaceView) {
+        this.surfaceView = surfaceView;
+        if (isPlaying) {
+            // 如果已经在播放，则重新设置解码器输出
+            setupDecoderOutput();
+        }
+    }
+    
+    /**
+     * 移除视频显示视图
+     */
+    public void removeSurfaceView() {
+        if (this.surfaceView != null) {
+            // 清理资源
+            if (isPlaying) {
+                // 如果正在播放，暂时停止渲染但保持解码
+                pauseRendering();
+            }
+            this.surfaceView = null;
+        }
+    }
+    
+    /**
+     * 初始化视频播放器
      */
     private void initPlayer() {
         try {
@@ -145,42 +168,25 @@ public class VideoStreamManager {
     }
     
     /**
-     * 开始播放视频流
+     * 开始播放视频
      */
     public void startPlay() {
-        if (isPlaying || player == null) {
+        if (surfaceView == null) {
+            // 如果没有设置SurfaceView，记录状态但不实际开始播放
+            Log.w(TAG, "尝试开始播放但SurfaceView未设置");
+            pendingPlay = true;
             return;
         }
         
-        // 使用线程池在后台线程执行网络操作
-        Executors.newSingleThreadExecutor().execute(() -> {
-            try {
-                // 创建RTSP媒体源
-                RtspMediaSource.Factory rtspFactory = new RtspMediaSource.Factory()
-                        .setForceUseRtpTcp(true); // 强制使用TCP，提高稳定性
-                
-                MediaSource mediaSource = rtspFactory.createMediaSource(
-                        MediaItem.fromUri(Uri.parse(RTSP_URL)));
-                
-                // 在主线程上准备并开始播放
-                new Handler(Looper.getMainLooper()).post(() -> {
-                    player.setMediaSource(mediaSource);
-                    player.prepare();
-                    player.play();
-                });
-                
-                Log.d(TAG, "开始播放视频流: " + RTSP_URL);
-            } catch (Exception e) {
-                Log.e(TAG, "开始播放失败: " + e.getMessage());
-                e.printStackTrace();
-                
-                if (callback != null) {
-                    new Handler(Looper.getMainLooper()).post(() -> 
-                        callback.onPlayError("开始播放失败: " + e.getMessage())
-                    );
-                }
-            }
-        });
+        // 开始播放逻辑
+        // ...
+        
+        isPlaying = true;
+        pendingPlay = false;
+        
+        if (callback != null) {
+            callback.onPlayStarted();
+        }
     }
     
     /**

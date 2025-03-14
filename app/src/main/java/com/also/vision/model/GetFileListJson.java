@@ -1,30 +1,68 @@
 package com.also.vision.model;
 
+import com.alibaba.fastjson.annotation.JSONField;
+
+import java.util.ArrayList;
 import java.util.List;
 
 /**
  * 获取文件列表响应JSON
  */
 public class GetFileListJson {
-    private int msg_id;
-    private int rval;
+    @JSONField(name = "msg_id")
+    private int msgId;
+    
+    @JSONField(name = "rval")
+    private int result;
+    
+    @JSONField(name = "total")
     private int total;
-    private List<FileItem> files;
     
-    public int getMsg_id() {
-        return msg_id;
+    @JSONField(name = "offset")
+    private int offset;
+    
+    @JSONField(name = "count")
+    private int count;
+    
+    @JSONField(name = "files")
+    private List<FileJson> files;
+    
+    /**
+     * 将JSON数据转换为DeviceFile列表
+     * @return DeviceFile列表
+     */
+    public List<DeviceFile> getFileList() {
+        List<DeviceFile> fileList = new ArrayList<>();
+        if (files != null) {
+            for (FileJson fileJson : files) {
+                DeviceFile file = new DeviceFile();
+                file.setFileName(fileJson.getName());
+                file.setFileSize(fileJson.getSize());
+                file.setFileTime(fileJson.getTime());
+                file.setFileType(fileJson.getType());
+                file.setFileUrl(fileJson.getUrl());
+                file.setThumbnailUrl(fileJson.getThumbnailUrl());
+                fileList.add(file);
+            }
+        }
+        return fileList;
     }
     
-    public void setMsg_id(int msg_id) {
-        this.msg_id = msg_id;
+    // Getters and Setters
+    public int getMsgId() {
+        return msgId;
     }
     
-    public int getRval() {
-        return rval;
+    public void setMsgId(int msgId) {
+        this.msgId = msgId;
     }
     
-    public void setRval(int rval) {
-        this.rval = rval;
+    public int getResult() {
+        return result;
+    }
+    
+    public void setResult(int result) {
+        this.result = result;
     }
     
     public int getTotal() {
@@ -35,27 +73,56 @@ public class GetFileListJson {
         this.total = total;
     }
     
-    public List<FileItem> getFiles() {
+    public int getOffset() {
+        return offset;
+    }
+    
+    public void setOffset(int offset) {
+        this.offset = offset;
+    }
+    
+    public int getCount() {
+        return count;
+    }
+    
+    public void setCount(int count) {
+        this.count = count;
+    }
+    
+    public List<FileJson> getFiles() {
         return files;
     }
     
-    public void setFiles(List<FileItem> files) {
+    public void setFiles(List<FileJson> files) {
         this.files = files;
     }
     
     /**
-     * 文件项
+     * 文件JSON对象
      */
-    public static class FileItem {
+    public static class FileJson {
+        @JSONField(name = "name")
         private String name;
-        private String path;
-        private String url;
-        private String thumb;
-        private long size;
-        private String time;
-        private int type;
-        private int duration;
         
+        @JSONField(name = "path")
+        private String path;
+        
+        @JSONField(name = "size")
+        private long size;
+        
+        @JSONField(name = "time")
+        private String time;
+        
+        @JSONField(name = "type")
+        private int type;
+        
+        @JSONField(name = "url")
+        private String url;
+        
+        @JSONField(name = "thumb_url")
+        private String thumbnailUrl;
+        
+        // Getters and Setters
         public String getName() {
             return name;
         }
@@ -70,22 +137,6 @@ public class GetFileListJson {
         
         public void setPath(String path) {
             this.path = path;
-        }
-        
-        public String getUrl() {
-            return url;
-        }
-        
-        public void setUrl(String url) {
-            this.url = url;
-        }
-        
-        public String getThumb() {
-            return thumb;
-        }
-        
-        public void setThumb(String thumb) {
-            this.thumb = thumb;
         }
         
         public long getSize() {
@@ -112,12 +163,20 @@ public class GetFileListJson {
             this.type = type;
         }
         
-        public int getDuration() {
-            return duration;
+        public String getUrl() {
+            return url;
         }
         
-        public void setDuration(int duration) {
-            this.duration = duration;
+        public void setUrl(String url) {
+            this.url = url;
+        }
+        
+        public String getThumbnailUrl() {
+            return thumbnailUrl;
+        }
+        
+        public void setThumbnailUrl(String thumbnailUrl) {
+            this.thumbnailUrl = thumbnailUrl;
         }
     }
 } 

@@ -16,7 +16,7 @@ public class DeviceFile {
     private String thumbnailUrl;  // 缩略图URL
     private String fileUrl;       // 文件URL
     private long fileSize;        // 文件大小(字节)
-    private Date createTime;      // 创建时间
+    private String createTime;    // 创建时间
     private int fileType;         // 文件类型(1=视频, 2=图片)
     private int duration;         // 视频时长(秒)，仅对视频有效
     
@@ -24,7 +24,7 @@ public class DeviceFile {
     }
     
     public DeviceFile(String fileName, String filePath, String thumbnailUrl, String fileUrl, 
-                     long fileSize, Date createTime, int fileType) {
+                     long fileSize, String createTime, int fileType) {
         this.fileName = fileName;
         this.filePath = filePath;
         this.thumbnailUrl = thumbnailUrl;
@@ -75,11 +75,11 @@ public class DeviceFile {
         this.fileSize = fileSize;
     }
     
-    public Date getCreateTime() {
+    public String getCreateTime() {
         return createTime;
     }
     
-    public void setCreateTime(Date createTime) {
+    public void setCreateTime(String createTime) {
         this.createTime = createTime;
     }
     
@@ -103,8 +103,12 @@ public class DeviceFile {
     public String toString() {
         return "DeviceFile{" +
                 "fileName='" + fileName + '\'' +
-                ", fileType=" + (fileType == TYPE_VIDEO ? "视频" : "图片") +
+                ", filePath='" + filePath + '\'' +
                 ", fileSize=" + fileSize +
+                ", createTime='" + createTime + '\'' +
+                ", fileType=" + fileType +
+                ", fileUrl='" + fileUrl + '\'' +
+                ", thumbnailUrl='" + thumbnailUrl + '\'' +
                 '}';
     }
 } 

@@ -1,25 +1,32 @@
 package com.also.vision.model;
 
 /**
- * 设备信息模型类
+ * 设备信息实体类
  */
 public class DeviceInfo {
-    private String cameraType;
-    private String firmwareVersion;
-    private String firmwareDate;
-    private String paramVersion;
-    private String serialNumber;
-    private String verifyCode;
+    private String deviceName; // 设备名称
+    private String chipId; // 芯片ID
+    private String firmwareVersion; // 固件版本
+    private String hardwareVersion; // 硬件版本
+    private String apiVersion; // API版本
+    private String serialNumber; // 序列号
+    private String vendorName; // 厂商名称
     
-    public DeviceInfo() {
+    // Getters and Setters
+    public String getDeviceName() {
+        return deviceName;
     }
     
-    public String getCameraType() {
-        return cameraType;
+    public void setDeviceName(String deviceName) {
+        this.deviceName = deviceName;
     }
     
-    public void setCameraType(String cameraType) {
-        this.cameraType = cameraType;
+    public String getChipId() {
+        return chipId;
+    }
+    
+    public void setChipId(String chipId) {
+        this.chipId = chipId;
     }
     
     public String getFirmwareVersion() {
@@ -30,20 +37,20 @@ public class DeviceInfo {
         this.firmwareVersion = firmwareVersion;
     }
     
-    public String getFirmwareDate() {
-        return firmwareDate;
+    public String getHardwareVersion() {
+        return hardwareVersion;
     }
     
-    public void setFirmwareDate(String firmwareDate) {
-        this.firmwareDate = firmwareDate;
+    public void setHardwareVersion(String hardwareVersion) {
+        this.hardwareVersion = hardwareVersion;
     }
     
-    public String getParamVersion() {
-        return paramVersion;
+    public String getApiVersion() {
+        return apiVersion;
     }
     
-    public void setParamVersion(String paramVersion) {
-        this.paramVersion = paramVersion;
+    public void setApiVersion(String apiVersion) {
+        this.apiVersion = apiVersion;
     }
     
     public String getSerialNumber() {
@@ -54,23 +61,24 @@ public class DeviceInfo {
         this.serialNumber = serialNumber;
     }
     
-    public String getVerifyCode() {
-        return verifyCode;
+    public String getVendorName() {
+        return vendorName;
     }
     
-    public void setVerifyCode(String verifyCode) {
-        this.verifyCode = verifyCode;
+    public void setVendorName(String vendorName) {
+        this.vendorName = vendorName;
     }
     
     @Override
     public String toString() {
         return "DeviceInfo{" +
-                "cameraType='" + cameraType + '\'' +
+                "deviceName='" + deviceName + '\'' +
+                ", chipId='" + chipId + '\'' +
                 ", firmwareVersion='" + firmwareVersion + '\'' +
-                ", firmwareDate='" + firmwareDate + '\'' +
-                ", paramVersion='" + paramVersion + '\'' +
+                ", hardwareVersion='" + hardwareVersion + '\'' +
+                ", apiVersion='" + apiVersion + '\'' +
                 ", serialNumber='" + serialNumber + '\'' +
-                ", verifyCode='" + verifyCode + '\'' +
+                ", vendorName='" + vendorName + '\'' +
                 '}';
     }
 }
