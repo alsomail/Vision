@@ -12,6 +12,8 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.also.vision.R;
 import com.google.android.exoplayer2.ExoPlaybackException;
+import com.google.android.exoplayer2.MediaItem;
+import com.google.android.exoplayer2.PlaybackException;
 import com.google.android.exoplayer2.Player;
 import com.google.android.exoplayer2.SimpleExoPlayer;
 import com.google.android.exoplayer2.source.MediaSource;
@@ -71,13 +73,13 @@ public class VideoPlayerActivity extends AppCompatActivity {
                 Util.getUserAgent(this, "VisionClient"));
         
         MediaSource mediaSource = new ProgressiveMediaSource.Factory(dataSourceFactory)
-                .createMediaSource(Uri.parse(videoUrl));
+                .createMediaSource(MediaItem.fromUri(videoUrl));
         
         // 准备播放器
         player.prepare(mediaSource);
         
         // 设置播放器监听器
-        player.addListener(new Player.EventListener() {
+        player.addListener(new Player.Listener(){
             @Override
             public void onPlayerStateChanged(boolean playWhenReady, int playbackState) {
                 if (playbackState == Player.STATE_BUFFERING) {
@@ -86,9 +88,9 @@ public class VideoPlayerActivity extends AppCompatActivity {
                     progressBar.setVisibility(View.GONE);
                 }
             }
-            
+
             @Override
-            public void onPlayerError(ExoPlaybackException error) {
+            public void onPlayerError(PlaybackException error) {
                 Toast.makeText(VideoPlayerActivity.this, "播放错误: " + error.getMessage(), Toast.LENGTH_SHORT).show();
             }
         });

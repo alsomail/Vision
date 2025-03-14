@@ -77,14 +77,14 @@ class PhotoFragment : Fragment() {
                 // 更新UI
             }
         }
-        
+
         override fun onPhotoFailed(reason: String) {
             // 处理拍照失败
             activity?.runOnUiThread {
                 // 显示错误信息
             }
         }
-        
+
         // 其他需要处理的回调...
     }
 

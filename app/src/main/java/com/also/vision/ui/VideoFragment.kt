@@ -3,6 +3,7 @@ package com.also.vision.ui
 import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
+import android.view.SurfaceView
 import android.view.View
 import android.view.ViewGroup
 import android.widget.AdapterView
@@ -24,7 +25,7 @@ class VideoFragment : Fragment() {
     private lateinit var listView: ListView
     private lateinit var progressBar: ProgressBar
     private lateinit var tvEmpty: TextView
-    private lateinit var surfaceView: View
+    private lateinit var surfaceView: SurfaceView
 
     private var fileList = ArrayList<DeviceFile>()
     private var adapter: FileListAdapter? = null

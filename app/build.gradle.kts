@@ -34,6 +34,10 @@ android {
     buildFeatures {
         compose = true
     }
+
+    sourceSets["main"].apply {
+        jniLibs.srcDirs("libs", "libs")
+    }
 }
 
 dependencies {
@@ -57,7 +61,7 @@ dependencies {
     implementation("com.google.android.exoplayer:exoplayer-core:2.18.1")
     implementation("com.google.android.exoplayer:exoplayer-ui:2.18.1")
     implementation("com.google.android.exoplayer:exoplayer-rtsp:2.18.1")
-        
+
     // FastJSON依赖
     implementation("com.alibaba:fastjson:1.2.83")
 
@@ -66,11 +70,16 @@ dependencies {
     annotationProcessor("com.github.bumptech.glide:compiler:4.15.1")
 
     // 约束布局
-    implementation ("androidx.constraintlayout:constraintlayout:2.1.4")
-    implementation ("androidx.appcompat:appcompat:1.6.1")
+    implementation("androidx.constraintlayout:constraintlayout:2.1.4")
+    implementation("androidx.appcompat:appcompat:1.6.1")
 
-    implementation ("com.google.android.material:material:1.6.0")
+    implementation("com.google.android.material:material:1.6.0")
 
-    implementation ("com.github.chrisbanes:PhotoView:2.3.0")
-   
+    implementation("com.github.chrisbanes:PhotoView:2.3.0")
+
+    // 添加本地 libs 目录下的所有 jar 文件
+    implementation(fileTree(mapOf("dir" to "libs", "include" to listOf("*.jar"))))
+    
+    // 如果需要添加特定的 jar 文件，可以这样写：
+    // implementation(files("libs/specific-library.jar"))
 }

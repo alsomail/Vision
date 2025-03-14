@@ -68,8 +68,7 @@ public class ImageViewerActivity extends AppCompatActivity {
         progressBar.setVisibility(View.VISIBLE);
         
         RequestOptions options = new RequestOptions()
-                .diskCacheStrategy(DiskCacheStrategy.ALL)
-                .error(R.drawable.ic_error);
+                .diskCacheStrategy(DiskCacheStrategy.ALL);
         
         Glide.with(this)
                 .load(imageUrl)
