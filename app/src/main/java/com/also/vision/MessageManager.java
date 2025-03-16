@@ -134,7 +134,7 @@ public class MessageManager {
     public static final int MSG_SD_INFO = 100;
 
     /**
-     * 格式化SD卡消息ID
+     * 格式化SD卡消息ID (未在Protocol中定义)
      * 请求体: {"token":12345,"msg_id":102,"sd_status":"1","format":"1"}
      * 响应体: {"msg_id":102,"rval":0}
      */
@@ -178,14 +178,14 @@ public class MessageManager {
 
     // 视频流相关消息
     /**
-     * 开始视频流
+     * 开始视频流 (未在Protocol中定义)
      * 请求体: {"token":12345,"msg_id":259,"param":"rtsp://192.168.42.1/live"}
      * 响应体: {"msg_id":259,"rval":0,"url":"rtsp://192.168.42.1/live"}
      */
     public static final int MSG_START_STREAM = 259;
 
     /**
-     * 停止视频流
+     * 停止视频流 (未在Protocol中定义)
      * 请求体: {"token":12345,"msg_id":260}
      * 响应体: {"msg_id":260,"rval":0}
      */
@@ -226,15 +226,9 @@ public class MessageManager {
     public static final int MSG_DELETE_FILE = 1282;
 
     /**
-     * 下载文件消息ID
+     * 下载文件消息ID (未在Protocol中定义)
      * 请求体: {"token":12345,"msg_id":1283,"param":"IMG_0001.JPG"}
      * 响应体: {"msg_id":1283,"rval":0,"url":"http://192.168.42.1/DCIM/100MEDIA/IMG_0001.JPG"}
-     * <p>
-     * 参数说明:
-     * param: 要下载的文件名
-     * <p>
-     * 响应说明:
-     * url: 文件下载URL，可通过HTTP直接下载
      */
     public static final int MSG_DOWNLOAD_FILE = 1283;
 
@@ -514,7 +508,14 @@ public class MessageManager {
      * 获取SD卡信息
      */
     public void getSDCardInfo() {
-        sendMessage(MSG_SD_INFO, null, null);
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.put("token", this.tokenNumber);
+        jsonObject.put("msg_id", Protocol.MSG_GET_SD_INFO);
+        
+        String jsonStr = jsonObject.toJSONString();
+        connection.sendData(jsonStr.getBytes(), Protocol.MSG_GET_SD_INFO);
+        
+        Log.d(TAG, "发送获取SD卡信息命令: " + jsonStr);
     }
 
     /**
@@ -540,14 +541,28 @@ public class MessageManager {
      * 拍照
      */
     public void takePhoto() {
-        sendMessage(MSG_TAKE_PHOTO, null, null);
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.put("token", this.tokenNumber);
+        jsonObject.put("msg_id", Protocol.MSG_TAKE_PHOTO);
+        
+        String jsonStr = jsonObject.toJSONString();
+        connection.sendData(jsonStr.getBytes(), Protocol.MSG_TAKE_PHOTO);
+        
+        Log.d(TAG, "发送拍照命令: " + jsonStr);
     }
 
     /**
      * 事件记录
      */
     public void eventRecord() {
-        sendMessage(MSG_EVENT_RECORD, null, null);
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.put("token", this.tokenNumber);
+        jsonObject.put("msg_id", Protocol.MSG_START_RECORD);
+        
+        String jsonStr = jsonObject.toJSONString();
+        connection.sendData(jsonStr.getBytes(), Protocol.MSG_START_RECORD);
+        
+        Log.d(TAG, "发送事件记录命令: " + jsonStr);
     }
 
     /**
@@ -619,7 +634,15 @@ public class MessageManager {
      * 设置应用状态
      */
     public void setAppStatus() {
-        sendMessage(MSG_APP_STATUS, null, "app_status");
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.put("token", this.tokenNumber);
+        jsonObject.put("msg_id", Protocol.MSG_GET_APP_STATUS);
+        jsonObject.put("type", "app_status");
+        
+        String jsonStr = jsonObject.toJSONString();
+        connection.sendData(jsonStr.getBytes(), Protocol.MSG_GET_APP_STATUS);
+        
+        Log.d(TAG, "发送获取应用状态命令: " + jsonStr);
     }
 
     /**
@@ -664,14 +687,14 @@ public class MessageManager {
     public void getFileList(String fileType, int offset, int count) {
         JSONObject jsonObject = new JSONObject();
         jsonObject.put("token", this.tokenNumber);
-        jsonObject.put("msg_id", MSG_GET_FILE_LIST);
-        jsonObject.put("param", fileType);
-        jsonObject.put("offset", offset);
-        jsonObject.put("count", count);
-
+        jsonObject.put("msg_id", Protocol.MSG_GET_FILE_LIST);
+        jsonObject.put("param", offset);        // Protocol中使用param作为起始索引
+        jsonObject.put("type", fileType);       // Protocol中使用type指定文件类型
+        jsonObject.put("pageSize", count);      // Protocol中使用pageSize指定每页数量
+        
         String jsonStr = jsonObject.toJSONString();
-        connection.sendData(jsonStr.getBytes(), MSG_GET_FILE_LIST);
-
+        connection.sendData(jsonStr.getBytes(), Protocol.MSG_GET_FILE_LIST);
+        
         Log.d(TAG, "发送获取文件列表命令: " + jsonStr);
     }
 
@@ -683,11 +706,11 @@ public class MessageManager {
     public void deleteFile(String fileName) {
         JSONObject jsonObject = new JSONObject();
         jsonObject.put("token", this.tokenNumber);
-        jsonObject.put("msg_id", MSG_DELETE_FILE);
+        jsonObject.put("msg_id", Protocol.MSG_DELETE_FILE);
         jsonObject.put("param", fileName);
 
         String jsonStr = jsonObject.toJSONString();
-        connection.sendData(jsonStr.getBytes(), MSG_DELETE_FILE);
+        connection.sendData(jsonStr.getBytes(), Protocol.MSG_DELETE_FILE);
 
         Log.d(TAG, "发送删除文件命令: " + jsonStr);
     }
